@@ -130,10 +130,12 @@ function parseBody(from, body) {
       if (err) { sendSMS(from, 'An error occured'); }
       else {
         if (doc != null && doc != {}) {
+          var message = '';
           _.each(doc.stops, function(stop, index) {
-            console.log((index+1) + '. ' + stop + '\n');
-            sendSMS(from, (index+1) + '. ' + stop + '\n');
-          });
+            message += (index+1) + '. ' + stop.title + '\n';
+          })
+          console.log(message);
+          sendSMS(from, message);
         } else { sendSMS(from, 'Incorrect code'); }
       }
     });

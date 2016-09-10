@@ -66,7 +66,7 @@ app.get('/api/createNewRoute', function(req, res) {
 
 // Params: busID, newLat, newLng
 app.get('/api/updateLocation', function(req, res) {
-  var busID = req.query.busID || 'noBusID';
+  var routeID = req.query.routeID || 'noRouteID';
   var currentLoc = {
     lat: req.query.lat || 0,
     lng: req.query.lng || 0
@@ -87,6 +87,7 @@ app.get('/api/updateLocation', function(req, res) {
   });
 })
 
+// but it's not by nearest, its by location
 function calculateNearest(stops, currentLoc) {
   _.sortBy(stops, function(stop) {
     // Times -1 because smallest distance is what we want
@@ -109,12 +110,28 @@ function distance(lat1, lon1, lat2, lon2) {
 
 
 
+
+var commands = {
+  join: 'join %param%',
+};
+
+function parseBody(from, body) {
+  if (body.indexOf('join') == 0) {
+    var routeCode = body.substring('join '.length);
+    console.log(routeCode);
+    sendSMS(from, routeCode);
+  }
+}
+
+
 app.post('/sms/incoming', function(req, res) {
   if (req.body) {
     var from = req.body.From;
-    var body = req.body.Body;
+    var body = req.body.Body.toLowerCase();
 
-    sendSMS(from, body);
+    parseBody(from, body);
+
+    //sendSMS(from, body);
   }
 });
 

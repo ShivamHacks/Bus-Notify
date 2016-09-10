@@ -158,8 +158,10 @@ app.post('/sms/incoming', function(req, res) {
 
     parseBody(from, body);
 
-    //sendSMS(from, body);
+    sendSMS(from, body);
   }
+  res.status(200);
+  res.send('All good');
 });
 
 function sendSMS(to, message) {

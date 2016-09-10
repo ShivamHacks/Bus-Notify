@@ -101,7 +101,7 @@ app.get('/api/updateLocation', function(req, res) {
   var message = req.query.message;
   db.students.find({
     route: routeID,
-    stop: stopNum
+    stop: parseInt(stopNum)
   }, function(err, docs) {
     console.log(docs);
     _.each(docs, function(doc) {
@@ -109,6 +109,7 @@ app.get('/api/updateLocation', function(req, res) {
         sendSMS(doc.number, message);
     });
   });
+  res.status(200);
   res.send('All good');
 });
 

@@ -132,7 +132,7 @@ function parseBody(from, body) {
         if (doc != null && doc != {}) {
           var message = '';
           _.each(doc.stops, function(stop, index) {
-            return (index+1) + '. ' + stop + '\n';
+            message += (index+1) + '. ' + stop + '\n';
           })
           console.log(message);
           sendSMS(from, message);

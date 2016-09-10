@@ -122,6 +122,7 @@ function parseBody(from, body) {
     db.routes.findOne({
       routeID: routeCode
     }, function(err, doc) {
+      sendSMS(from, JSON.stringify(doc));
       if (err) { sendSMS(from, 'An error occured'); }
       else {
         if (doc != null) {

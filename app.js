@@ -134,14 +134,41 @@ function parseBody(from, body) {
           _.each(doc.stops, function(stop, index) {
             message += (index+1) + '. ' + stop.title + '\n';
           })
-          console.log(message);
           sendSMS(from, message);
+          db.students.insert({
+            route: routeCode,
+            number: from
+          }, function(err, newDoc) {
+            console.log(newDoc);
+          });
         } else { sendSMS(from, 'Incorrect code'); }
       }
     });
   } else {
+    // save student number, route, and stop index. Then when we figure out which stop is closest, then 
+    // we can just look for students with that route & that stop, and text them.
     sendSMS(from, 'lol');
     // telling us which stop
+    if (!isNan(body)) {
+      var stopNum = parseInt(body);
+      db.students.findOne({
+        number: from
+      }, function(err, doc) {
+        if (err) { sendSMS(from, 'An error occured'); }
+        else {
+          db.students.update({
+            number: from
+          }, {
+            $set: {
+              stop: stopNum
+            }
+          }, {}, function() {});
+          sendSMS(from, 'Success! You will now recieve text updates when your bus is nearby.');
+        }
+      });
+    } else {
+      sendSMS(from, 'Sorry, could not recognize stop. Could you please put in the number of your stop?');
+    }
     /*db.routes.findOne({
       routeID: routeCode
     }, function(err, doc) {

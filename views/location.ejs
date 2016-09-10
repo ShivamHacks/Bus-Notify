@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Simple Map</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8">
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    #map {
+      height: 100%;
+    }
+
+    /* Save Button */
+
+    #saveButton {
+      position: fixed;
+      top: 85%;
+      left: 35%;
+      width: 20%;
+      padding: 1% 5%;
+      text-align: center;
+      background: #0099CC;
+      border-radius: 5px;
+
+      color: white;
+      font-family: "Comic Sans MS", cursive, sans-serif;
+      font-size: 2em;
+
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      -khtml-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+      cursor: pointer;
+
+      -webkit-transition: all 0.1s;
+      -moz-transition: all 0.1s;
+      transition: all 0.1s;
+
+      -webkit-box-shadow: 0px 9px 0px #00688B;
+      -moz-box-shadow: 0px 9px 0px #00688B;
+      box-shadow: 0px 9px 0px #00688B;
+    }
+
+    #saveButton:active {
+      webkit-box-shadow: 0px 2px 0px #00688B;
+      -moz-box-shadow: 0px 2px 0px #00688B;
+      box-shadow: 0px 2px 0px #00688B;
+      top: 86%;
+    }
+
+    @media (orientation: portrait) {
+      #saveButton {
+        top: 90%;
+        left: 30%;
+        width: 20%;
+        padding: 5% 10%;
+      }
+    }
+
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div id="saveButton">Save</div>
+  <script src="https://code.jquery.com/jquery-2.2.4.min.js"></script>
+  <script>
+    var baseURL = "http://localhost:3000/api/"; // http://bus-notify.herokuapp.com/api/
+
+    var routeID = "<%= routeID %>";
+    var map;
+    var markers = [];
+    function initMap() {
+      map = new google.maps.Map(document.getElementById('map'), {
+        center: { lat: 40.4317, lng: -74.4050 },
+        zoom: 18,
+        disableDoubleClickZoom: true
+      });
+
+      google.maps.event.addListener(map, "dblclick", function (e) {
+        var latLng = e.latLng;
+        var title = prompt("What is the name of this stop?", "");
+        var marker = new google.maps.Marker({
+          position: latLng,
+          map: map,
+          title: title
+        });
+        markers.push({
+          lat: latLng.lat(),
+          lng: latLng.lng(),
+          title: title
+        });
+      });
+    }
+
+    $("#saveButton").on('click touch', function () {
+      var uriParams = "stops=" + encodeURIComponent(JSON.stringify(markers)) + "&routeID=" + routeID;
+
+      var xhttp = new XMLHttpRequest();
+      xhttp.open("GET", "/api/createNewRoute?" + uriParams, true);
+      xhttp.send();
+    });
+  </script>
+
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDsXK6uWqJU-23Yt0AEQR0UlOKO1zIrdVM&callback=initMap" async defer></script>
+</body>
+</html>

@@ -124,17 +124,15 @@ function parseBody(from, body) {
   if (body.indexOf('join') == 0) {
     // joining route
     var routeCode = body.substring('join '.length);
-    console.log(routeCode);
     db.routes.findOne({
       routeID: routeCode
     }, function(err, doc) {
-      console.log(doc);
-      sendSMS(from, JSON.stringify(doc));
       if (err) { sendSMS(from, 'An error occured'); }
       else {
-        if (doc != null) {
+        if (doc != null && doc != {}) {
           var message = '';
           _.each(doc.stops, function(stop, index) {
+            console.log(JSON.stringify(stop) + ',' + index);
             return (index+1) + '. ' + stop + '\n';
           })
           sendSMS(from, message);

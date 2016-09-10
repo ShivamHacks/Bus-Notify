@@ -103,11 +103,13 @@ app.get('/api/updateLocation', function(req, res) {
     route: routeID,
     stop: stopNum
   }, function(err, docs) {
+    console.log(docs);
     _.each(docs, function(doc) {
       if (doc != null && doc != {})
         sendSMS(doc.number, message);
-    })
+    });
   });
+  res.send('All good');
 });
 
 // but it's not by nearest, its by location

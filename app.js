@@ -132,9 +132,9 @@ function parseBody(from, body) {
         if (doc != null && doc != {}) {
           var message = '';
           _.each(doc.stops, function(stop, index) {
-            console.log(JSON.stringify(stop) + ',' + index);
             return (index+1) + '. ' + stop + '\n';
           })
+          console.log(message);
           sendSMS(from, message);
         } else { sendSMS(from, 'Incorrect code'); }
       }

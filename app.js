@@ -27,7 +27,7 @@ var config = require('./config');
 var twilio = require('twilio')(
   config.twilio_accountSID,
   config.twilio_authToken
-  );
+);
 var _ = require('underscore');
 
 app.get('/api/getUserLocation', function(req, res) {
@@ -70,7 +70,7 @@ app.get('/api/createNewRoute', function(req, res) {
 });
 
 // Params: busID, newLat, newLng
-app.get('/api/updateLocation', function(req, res) {
+app.get('/api/updateLocationasd', function(req, res) {
   var routeID = req.query.routeID || 'noRouteID';
   var currentLoc = {
     lat: req.query.lat || 0,
@@ -90,7 +90,25 @@ app.get('/api/updateLocation', function(req, res) {
       });
     });
   });
-})
+});
+
+// Params: routeID, stopNum, message
+// This function updates students on bus route status.
+// (only the students that should know)
+app.get('/api/updateLocation', function(req, res) {
+  var routeID = req.query.routeID;
+  var stopNum = req.query.stopNum;
+  var message = req.query.message;
+  db.students.find({
+    route: routeID,
+    stop: stopNum
+  }, function(err, docs) {
+    _.each(docs, function(doc) {
+      if (doc != null && doc != {})
+        sendSMS(doc.number, message);
+    })
+  });
+});
 
 // but it's not by nearest, its by location
 function calculateNearest(stops, currentLoc) {

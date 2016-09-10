@@ -40,7 +40,8 @@ app.post('/sms/incoming', function(req, res) {
   console.log('got message');
   if (twilio.validateExpressRequest(req, config.twilio_authToken)) {
     var twiml = new twilio.TwimlResponse();
-    twiml.say('Hi!  Thanks for checking out my app!');
+    //twiml.say('Hi!  Thanks for checking out my app!');
+    twiml.say(JSON.stringify(req.body));
     res.type('text/xml');
     res.send(twiml.toString());
   } else {

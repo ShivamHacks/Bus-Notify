@@ -29,7 +29,7 @@ var config = require('./config');
 var twilio = require('twilio')(
   config.twilio_accountSID,
   config.twilio_authToken
-);
+  );
 var _ = require('underscore');
 
 app.get('/api/getUserLocation', function(req, res) {
@@ -101,9 +101,9 @@ function distance(lat1, lon1, lat2, lon2) {
   var dLat = (lat2 - lat1) * Math.PI / 180;  // deg2rad below
   var dLon = (lon2 - lon1) * Math.PI / 180;
   var a = 
-     0.5 - Math.cos(dLat)/2 + 
-     Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-     (1 - Math.cos(dLon))/2;
+  0.5 - Math.cos(dLat)/2 + 
+  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+  (1 - Math.cos(dLon))/2;
 
   return R * 2 * Math.asin(Math.sqrt(a));
 }
@@ -117,9 +117,36 @@ var commands = {
 
 function parseBody(from, body) {
   if (body.indexOf('join') == 0) {
+    // joining route
     var routeCode = body.substring('join '.length);
-    console.log(routeCode);
-    sendSMS(from, routeCode);
+    db.routes.findOne({
+      routeID: routeCode
+    }, function(err, doc) {
+      if (err) { sendSMS(from, 'An error occured'); }
+      else {
+        var message = '';
+        _.each(doc.stops, function(stop, index) {
+          return (index+1) + '. ' + stop + '\n';
+        })
+        sendSMS(from, message);
+      }
+    });
+  } else {
+    // telling us which stop
+    /*db.routes.findOne({
+      routeID: routeCode
+    }, function(err, doc) {
+      if (err) { sendSMS(from, 'An error occured'); }
+      else {
+        var stop = doc.stops[parseInt(body)];
+        db.students.insert({
+          stop: stop
+        }, function(err, newDoc) {
+          if (err) sendSMS(from, 'An error occured');
+          else sendSMS(from, 'Successfully recorded your stop as: ' + newDoc.stop);
+        });
+      }
+    });*/
   }
 }
 

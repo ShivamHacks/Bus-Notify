@@ -147,10 +147,11 @@ function parseBody(from, body) {
   } else {
     // save student number, route, and stop index. Then when we figure out which stop is closest, then 
     // we can just look for students with that route & that stop, and text them.
-    sendSMS(from, 'lol');
+
     // telling us which stop
-    if (!isNan(body)) {
+    if (!isNaN(body)) {
       var stopNum = parseInt(body);
+      console.log(stopNum);
       db.students.findOne({
         number: from
       }, function(err, doc) {

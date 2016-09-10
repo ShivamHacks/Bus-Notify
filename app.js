@@ -124,14 +124,17 @@ function parseBody(from, body) {
     }, function(err, doc) {
       if (err) { sendSMS(from, 'An error occured'); }
       else {
-        var message = '';
-        _.each(doc.stops, function(stop, index) {
-          return (index+1) + '. ' + stop + '\n';
-        })
-        sendSMS(from, message);
+        if (doc != null) {
+          var message = '';
+          _.each(doc.stops, function(stop, index) {
+            return (index+1) + '. ' + stop + '\n';
+          })
+          sendSMS(from, message);
+        } else { sendSMS(from, 'Incorrect code'); }
       }
     });
   } else {
+    sendSMS(from, 'lol');
     // telling us which stop
     /*db.routes.findOne({
       routeID: routeCode
@@ -158,7 +161,6 @@ app.post('/sms/incoming', function(req, res) {
 
     parseBody(from, body);
 
-    sendSMS(from, body);
   }
   res.status(200);
   res.send('All good');

@@ -15,12 +15,10 @@ app.listen(process.env.PORT || '3000', function () {
   console.log('Server started on port: ' + this.address().port);
 });
 
-var shortid = require('shortid');
+var shortid = require('randomstring');
 
 app.get('/', function(req, res) {
-  res.render('location', {
-    routeID: shortid.generate()
-  });
+  res.send('HELLO');
 });
 
 // MAIN
@@ -48,7 +46,14 @@ var db = {
   students: new Datastore({ filename: 'db/students.db', autoload: true })
 }
 
-// Params: 
+
+app.get('/createNewRoute', function(req, res) {
+  res.render('location', {
+    routeID: shortid.generate({ length: 5, charset: 'numeric' })
+  });
+})
+
+// Params: stops, routeID
 app.get('/api/createNewRoute', function(req, res) {
   var stops = JSON.parse(req.query.stops || null);
   var routeID = req.query.routeID || null;
@@ -119,6 +124,7 @@ function parseBody(from, body) {
   if (body.indexOf('join') == 0) {
     // joining route
     var routeCode = body.substring('join '.length);
+    console.log(routeCode);
     db.routes.findOne({
       routeID: routeCode
     }, function(err, doc) {

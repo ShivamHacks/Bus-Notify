@@ -14,6 +14,21 @@
       height: 100%;
     }
 
+    #routeID {
+      position: fixed;
+      top: 5%;
+      left: 35%;
+      width: 20%;
+      padding: 1% 5%;
+      text-align: center;
+      background: #0099CC;
+      border-radius: 5px;
+
+      color: white;
+      font-family: "Comic Sans MS", cursive, sans-serif;
+      font-size: 2em;
+    }
+
     /* Save Button */
 
     #saveButton {
@@ -67,11 +82,10 @@
 </head>
 <body>
   <div id="map"></div>
+  <div id="routeID"><%= routeID %></div>
   <div id="saveButton">Save</div>
   <script src="https://code.jquery.com/jquery-2.2.4.min.js"></script>
   <script>
-    var baseURL = "http://localhost:3000/api/"; // http://bus-notify.herokuapp.com/api/
-
     var routeID = "<%= routeID %>";
     var map;
     var markers = [];

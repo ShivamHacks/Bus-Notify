@@ -14,44 +14,37 @@ app.get('/', function(req, res) {
   res.send('HELLO!');
 });
 
+// MAIN
+
 var config = require('./config');
 var twilio = require('twilio')(
   config.twilio_accountSID,
   config.twilio_authToken
 );
 
-twilio.sendSms({
-    to:'+17322669350',
-    from: config.twilio_phoneNumber,
-    body:'ahoy hoy! Testing Twilio and node.js'
-}, function(error, message) {
-    if (!error) {
-        console.log('Success! The SID for this SMS message is:');
-        console.log(message.sid);
-        console.log('Message sent on:');
-        console.log(message.dateCreated);
-    } else {
-        console.log('Oops! There was an error.');
-        console.log(error);
-    }
+app.post('/sms/incoming', function(req, res) {
+  if (req.body) {
+    var from = req.body.From;
+    var body = req.body.Body;
+
+    sendSMS(from, body);
+  }
 });
 
-app.post('/sms/incoming', function(req, res) {
-  //console.log('got message');
-  console.log(req.body);
-  //var twiml = new twilio.TwimlResponse();
-  //twiml.message('Hi!');
-  //res.writeHead(200, {'Content-Type': 'text/xml'});
-  //res.end(twiml.toString());
-  /*if (twilio.validateExpressRequest(req, config.twilio_authToken)) {
-    var twiml = new twilio.TwimlResponse();
-    //twiml.say('Hi!  Thanks for checking out my app!');
-    twiml.message('hello');
-    res.type('text/xml');
-    res.send(twiml.toString());
-  } else {
-    res.send('you are not twilio.  Buzz off.');
-  }*/
-});
+function sendSMS(to, message) {
+  twilio.sendSms({
+    to: to,
+    from: config.twilio_phoneNumber,
+    body: message
+  }, function(error, message) {
+    if (error) {
+      console.log('SMS Error: Send');
+      console.log(error);
+    } else {
+      console.log('SMS Success: Send');
+      console.log(message);
+    }
+  });
+}
 
 module.exports = app;

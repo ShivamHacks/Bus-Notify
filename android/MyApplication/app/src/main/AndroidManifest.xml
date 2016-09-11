@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="b_us.hack.org.myapplication" >
+    <receiver android:name="MyBTReceiver">
+        <intent-filter>
+            <action android:name="b_us.hack.org.myapplication.BROADCAST">
+            </action>
+        </intent-filter>
+    </receiver>
+    <uses-permission android:name="b_us.hack.org.myapplication.permission.MAPS_RECEIVE"/>
+    <uses-permission android:name="com.google.android.providers.gsf.permission.READ_GSERVICES"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="com.google.android.gms.permission.ACTIVITY_RECOGNITION" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="22" />
+    <permission
+        android:name="b_us.hack.org.myapplication.permission.MAPS_RECEIVE"
+        android:protectionLevel="signature"/>
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme" >
+        <service
+            android:name=".Service"
+            android:exported="false" />
+        <service android:name=".ActivityRecognitionIntentService" />
+        <meta-data android:name="com.google.android.geo.API_KEY" android:value="AIzaSyCYIYC3d3Eq-Q4p7fFf5OMh555xScV-oQ0"/>
+        <activity
+            android:name=".MainActivity"
+            android:label="@string/app_name"
+            android:theme="@style/AppTheme.NoActionBar" >
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity android:name=".NewRouteActivity"></activity>
+    </application>
+
+</manifest>

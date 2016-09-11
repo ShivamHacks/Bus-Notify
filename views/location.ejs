@@ -14,12 +14,28 @@
       height: 100%;
     }
 
+    #routeIDinput {
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: transparent;
+
+      color: white;
+      font-family: "Comic Sans MS", cursive, sans-serif;
+      font-size: 1.2em;
+      text-align: center;
+    }
+    input[type=text]:focus {
+      outline: none;
+    }
+
     #routeID {
       position: fixed;
       top: 5%;
       left: 35%;
       width: 20%;
-      padding: 1% 5%;
+      padding: 0% 5%;
+      height: 10%;
       text-align: center;
       background: #0099CC;
       border-radius: 5px;
@@ -82,14 +98,16 @@
 </head>
 <body>
   <div id="map"></div>
-  <div id="routeID"><%= routeID %></div>
-  <div id="saveButton">Save</div>
+  <div id="routeID"><input id="routeIDinput" type="text" placeholder="Route ID" maxlength="5"></div></div>
+  <div id="saveButton">Load Map</div>
   <script src="https://code.jquery.com/jquery-2.2.4.min.js"></script>
   <script>
-    var routeID = "<%= routeID %>";
     var map;
     var markers = [];
+    var openMarker = null;
+    var stopNum = 0;
     function initMap() {
+
       map = new google.maps.Map(document.getElementById('map'), {
         center: { lat: 40.4317, lng: -74.4050 },
         zoom: 18,
@@ -98,27 +116,89 @@
 
       google.maps.event.addListener(map, "dblclick", function (e) {
         var latLng = e.latLng;
-        var title = prompt("What is the name of this stop?", "");
-        var marker = new google.maps.Marker({
-          position: latLng,
-          map: map,
-          title: title
-        });
+
+        addMarker(latLng, markers.length+1);
+
         markers.push({
           lat: latLng.lat(),
           lng: latLng.lng(),
-          title: title
+          stopNum: ++stopNum
         });
+      });
+
+    }
+
+    function addMarker(latLng, index) {
+      var marker = new google.maps.Marker({
+        position: latLng,
+        map: map,
+        label: index + ''
+      });
+
+      var infowindow = new google.maps.InfoWindow({
+        content: "<span>Is this your stop?</span>&nbsp;<button onclick='addMember()'>Yes</button>"
+      });
+
+      marker.addListener('click', function() {
+        infowindow.open(map, marker);
+        openMarker = marker.getLabel();
       });
     }
 
-    $("#saveButton").on('click touch', function () {
-      var uriParams = "stops=" + encodeURIComponent(JSON.stringify(markers)) + "&routeID=" + routeID;
+    function addMember() {
+      if (openMarker) {
+        var data = "number=" + prompt("Phone Number") + "&stop=" + openMarker + "&routeID=" + $("#routeIDinput").val();
+        var xhttp = new XMLHttpRequest();
+        xhttp.open("POST", "/api/addMember", true);
+        xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+        xhttp.send(data);
+        openMarker = null;
+      }
+    }
 
-      var xhttp = new XMLHttpRequest();
-      xhttp.open("GET", "/api/createNewRoute?" + uriParams, true);
-      xhttp.send();
+    var mapLoaded = false;
+    $("#saveButton").on('click touch', function () {
+      if (!mapLoaded) {
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+          if (this.readyState == 4 && this.status == 200) {
+            var res = JSON.parse(this.responseText);
+            if (res.newMap) {
+              $("#routeIDinput").val(res.routeID);
+            } else {
+              for (var i = 0; i < res.stops.length; i++) {
+                stopNum++;
+                addMarker(new google.maps.LatLng({
+                  lat: res.stops[i].lat,
+                  lng: res.stops[i].lng,
+                }), res.stops[i].stopNum);
+              }
+            }
+          }
+        };
+        xhttp.open("GET", "/api/getMap?routeID=" + $("#routeIDinput").val(), true);
+        xhttp.send();
+        $("#saveButton").text("Save");
+        mapLoaded = true;
+      } else {
+        // perfect
+        var data = "stops=" + encodeURIComponent(JSON.stringify(markers)) + "&routeID=" + $("#routeIDinput").val();
+        var xhttp = new XMLHttpRequest();
+        xhttp.open("POST", "/api/addStops", true);
+        xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+        xhttp.send(data);
+        markers = [];
+      }
     });
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(function(position) {
+        map.panTo({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        });
+      });
+    }
   </script>
 
   <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDsXK6uWqJU-23Yt0AEQR0UlOKO1zIrdVM&callback=initMap" async defer></script>

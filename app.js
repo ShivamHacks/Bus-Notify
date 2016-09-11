@@ -15,43 +15,28 @@ app.listen(process.env.PORT || '3000', function () {
   console.log('Server started on port: ' + this.address().port);
 });
 
-var shortid = require('randomstring');
-
 app.get('/', function(req, res) {
   res.send('HELLO');
 });
 
 // MAIN
+var shortid = require('randomstring');
 
 var config = require('./config');
-var twilio = require('twilio')(
-  config.twilio_accountSID,
-  config.twilio_authToken
-);
+var twilio = require('twilio')(config.twilio_accountSID, config.twilio_authToken);
 var _ = require('underscore');
-
-app.get('/api/getUserLocation', function(req, res) {
-  res.render('getLocation', {
-    userID: 'asdasdsa'
-  });
-});
-app.post('/api/setUserLocation', function(req, res) {
-  console.log(req.body);
-});
 
 var Datastore = require('nedb')
 var db = {
-  buses: new Datastore({ filename: 'db/buses.db', autoload: true }),
   routes: new Datastore({ filename: 'db/routes.db', autoload: true }),
   students: new Datastore({ filename: 'db/students.db', autoload: true })
-}
+};
 
 
 app.get('/createNewRoute', function(req, res) {
-  res.render('location', {
-    routeID: shortid.generate({ length: 5, charset: 'numeric' })
-  });
+  res.render('location', {});
 })
+
 
 // Params: stops, routeID
 app.get('/api/createNewRoute', function(req, res) {
@@ -69,157 +54,174 @@ app.get('/api/createNewRoute', function(req, res) {
   res.send('All Good');
 });
 
-// Params: busID, newLat, newLng
-app.get('/api/updateLocationasd', function(req, res) {
-  var routeID = req.query.routeID || 'noRouteID';
-  var currentLoc = {
-    lat: req.query.lat || 0,
-    lng: req.query.lng || 0
+
+app.get('/api/getMap', function(req, res) {
+  var routeID = req.query.routeID;
+  console.log(routeID);
+  db.routes.findOne({ routeID: routeID }, function(err, doc) {
+    console.log(doc);
+    if (!err) {
+      if (doc == null || doc == {}) {
+        db.routes.insert({
+          routeID: shortid.generate({ length: 5, charset: 'numeric' }),
+          stops: [],
+          lastStop: -1
+        }, function(err, doc) {
+          if (!err) {
+            res.send(JSON.stringify({ 
+              newMap: true,
+              routeID: doc.routeID
+            }));
+          }
+        });
+      } else { 
+        res.send(JSON.stringify({
+          newMap: false,
+          stops: doc.stops
+        })); 
+      }
+    }
+    else res.send('Error');
+  })
+});
+
+
+app.post('/api/addStops', function(req, res) {
+  var routeID = req.body.routeID;
+  var stops = JSON.parse(req.body.stops);
+  for (var i = 0; i < stops.length; i++) {
+    stops[i].members = [];
   }
+  db.routes.update({
+    routeID: routeID
+  }, {
+    $push: { 
+      stops: { $each: stops }
+    }
+  }, {}, function() {});
+});
+
+
+app.post('/api/addMember', function(req, res) {
+  var routeID = req.body.routeID;
+  var stopNum = req.body.stop;
+  var number = req.body.number;
+
+  db.students.update({
+    number: number
+  }, {
+    number: number,
+    stopNum: stopNum,
+    routeID: routeID
+  }, {
+    upsert: true
+  }, function() {});
+
+  res.status(200);
+  res.send('All Good');
+});
+
+
+var mapsDistance = require('google-distance');
+var schedule = require('node-schedule');
+
+app.get('/api/updateLocation', function(req, res) {
+
+  var routeID = req.query.routeID;
+  var moving = req.query.moving;
+  var currLoc = {
+    lat: req.query.lat,
+    lng: req.query.lng
+  };
 
   db.routes.findOne({
-    busID: busID
+    routeID: routeID
   }, function(err, doc) {
-    var nearest = calculateNearest(doc.stops, currentLoc);
-    db.students.find({
-      stop: nearest.name
-    }, function(err, docs) {
-      _.each(docs, function(doc) {
-        sendSMS(doc.number, 'Your stop is next.');
-        // todo: calculate time; how long it will take bus
-      });
-    });
-  });
-});
+    if (!err) {
+      if (doc != null && doc != {}) {
 
-// Params: routeID, stopNum, message
-// This function updates students on bus route status.
-// (only the students that should know)
-app.get('/api/updateLocation', function(req, res) {
-  var routeID = req.query.routeID;
-  var stopNum = req.query.stopNum;
-  var message = req.query.message;
-  db.students.find({
-    route: routeID,
-    stop: parseInt(stopNum)
-  }, function(err, docs) {
-    console.log(docs);
-    _.each(docs, function(doc) {
-      if (doc != null && doc != {})
-        sendSMS(doc.number, message);
-    });
+        if (!moving && isNear(doc.stops[doc.lastStop+1], currLoc)) {
+          // TODO: set lastStop = -1, and reset 
+          // it is on a stop
+
+          // send update to students
+          db.students.find({
+            routeID: routeID,
+            stop: doc.stops[doc.lastStop+1].stopNum
+          }, function(err, docs) {
+            if (!err) {
+              _.each(docs, function(doc) {
+                sendSMS(doc.number, 'Your bus is here!');
+              });
+            }
+          });
+
+          // update last stop
+          if (doc.lastStop + 1 == doc.stops.length) {
+            db.routes.update({
+              routeID: routeID
+            }, {
+              $set: { lastStop: -1 }
+            }, {}, function() {});
+          } else {
+            db.routes.update({
+              routeID: routeID
+            }, {
+              $set: { lastStop: doc.lastStop+1 }
+            }, {}, function() {});
+          }
+
+        } else {
+
+          // see when to send text
+          mapsDistance.get({
+            origin: currLoc.lat + ',' + currLoc.lng,
+            destination: doc.stops[doc.lastStop+1].lat + ',' + doc.stops[doc.lastStop+1].lng
+          }, function(err, data) {
+            if (err) return console.log(err);
+            else {
+              var duration = data.durationValue;
+              if (durationValue < 120) {
+                for (var i = 0; i < doc.members.length; i++) {
+                  sendSMS(doc.members[i], 'Your bus will be here in under 2 mins!');
+                }
+              } else {
+                var date = new Date(Date.now() + (data.durationValue * 1000) - 120000);
+                var j = schedule.scheduleJob(date, function(){
+                  sendSMS(doc.members[i], 'Your bus will be here in under 2 mins!'); 
+                });
+              }
+            }
+          });
+        }
+
+      }
+    }
   });
+
   res.status(200);
   res.send('All good');
+
 });
 
-// but it's not by nearest, its by location
-function calculateNearest(stops, currentLoc) {
-  _.sortBy(stops, function(stop) {
-    // Times -1 because smallest distance is what we want
-    return distance(stop, currentLoc) * -1;
-  });
-  return stops[0];
+
+function isNear(coord1, coord2) {
+  var eplison = 100; // 100m
+  var d = distance(coord1.lat, coord1.lng, coord2.lat, coord2.lng);
+  if (eplison * -1 < d || d < eplison) return true;
+  else return false;
 }
 
 function distance(lat1, lon1, lat2, lon2) {
   var R = 6371; // Radius of the earth in km
-  var dLat = (lat2 - lat1) * Math.PI / 180;  // deg2rad below
-  var dLon = (lon2 - lon1) * Math.PI / 180;
-  var a = 
-  0.5 - Math.cos(dLat)/2 + 
-  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-  (1 - Math.cos(dLon))/2;
-
-  return R * 2 * Math.asin(Math.sqrt(a));
+  var dLat = (lat2 - lat1) * (Math.PI / 180);
+  var dLon = (lon2 - lon1) * (Math.PI / 180);
+  var a = Math.sin(dLat/2) * Math.sin(dLat/2) 
+  + Math.sin(dLon/2) * Math.sin(dLon/2) 
+  * Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180)
+  return (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))) * 1000; // in meters
 }
 
-
-
-
-var commands = {
-  join: 'join %param%',
-};
-
-function parseBody(from, body) {
-  if (body.indexOf('join') == 0) {
-    // joining route
-    var routeCode = body.substring('join '.length);
-    db.routes.findOne({
-      routeID: routeCode
-    }, function(err, doc) {
-      if (err) { sendSMS(from, 'An error occured'); }
-      else {
-        if (doc != null && doc != {}) {
-          var message = '';
-          _.each(doc.stops, function(stop, index) {
-            message += (index+1) + '. ' + stop.title + '\n';
-          })
-          sendSMS(from, message);
-          db.students.insert({
-            route: routeCode,
-            number: from
-          }, function(err, newDoc) {
-            console.log(newDoc);
-          });
-        } else { sendSMS(from, 'Incorrect code'); }
-      }
-    });
-  } else {
-    // save student number, route, and stop index. Then when we figure out which stop is closest, then 
-    // we can just look for students with that route & that stop, and text them.
-
-    // telling us which stop
-    if (!isNaN(body)) {
-      var stopNum = parseInt(body);
-      console.log(stopNum);
-      db.students.findOne({
-        number: from
-      }, function(err, doc) {
-        if (err) { sendSMS(from, 'An error occured'); }
-        else {
-          db.students.update({
-            number: from
-          }, {
-            $set: {
-              stop: stopNum
-            }
-          }, {}, function() {});
-          sendSMS(from, 'Success! You will now recieve text updates when your bus is nearby.');
-        }
-      });
-    } else {
-      sendSMS(from, 'Sorry, could not recognize stop. Could you please put in the number of your stop?');
-    }
-    /*db.routes.findOne({
-      routeID: routeCode
-    }, function(err, doc) {
-      if (err) { sendSMS(from, 'An error occured'); }
-      else {
-        var stop = doc.stops[parseInt(body)];
-        db.students.insert({
-          stop: stop
-        }, function(err, newDoc) {
-          if (err) sendSMS(from, 'An error occured');
-          else sendSMS(from, 'Successfully recorded your stop as: ' + newDoc.stop);
-        });
-      }
-    });*/
-  }
-}
-
-
-app.post('/sms/incoming', function(req, res) {
-  if (req.body) {
-    var from = req.body.From;
-    var body = req.body.Body.toLowerCase();
-
-    parseBody(from, body);
-
-  }
-  res.status(200);
-  res.send('All good');
-});
 
 function sendSMS(to, message) {
   twilio.sendSms({
@@ -236,42 +238,5 @@ function sendSMS(to, message) {
     }
   });
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// Params: busID, stopName, stopLat, stopLng
-app.get('/api/addStop', function(req, res) {
-  var busID = req.query.busID || 'noBusID';
-  db.routes.update({
-    busID: busID
-  }, {
-    $push: {
-      stops: {
-        name: req.query.stopName || 'noStopName',
-        lat: req.query.stopLat || 0,
-        lng: req.query.stopLng || 0
-      }
-    }
-  }, {}, function() {});
-});
 
 module.exports = app;
